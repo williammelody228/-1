@@ -773,8 +773,15 @@ async function loadAdminReports() {
   const container = document.getElementById('adminRepList');
   container.innerHTML = '<div class="skeleton" style="height:60px;margin-bottom:8px"></div><div class="skeleton" style="height:60px"></div>';
   try {
-    // 관리자(authenticated)만 조회 가능
-    const reports = await sbGet('reports', 'order=created_at.desc');
+    // 관리자 토큰으로 조회 (RLS: authenticated만 SELECT 허용)
+    const res = await fetch(`${SB_URL}/rest/v1/reports?order=created_at.desc`, {
+      headers: {
+        'apikey': SB_ANON,
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+    if (!res.ok) throw new Error(res.status);
+    const reports = await res.json();
     if (!reports.length) { container.innerHTML = '<div class="no-rep">건의사항이 없습니다</div>'; return; }
     container.innerHTML = reports.map(r => `
       <div class="rep-item">
@@ -783,7 +790,7 @@ async function loadAdminReports() {
         <button class="btn-rep-del" onclick="deleteReport('${r.id}')">삭제</button>
       </div>`).join('');
   } catch(e) {
-    container.innerHTML = '<div class="no-rep" style="color:var(--red)">불러오기 실패</div>';
+    container.innerHTML = '<div class="no-rep" style="color:var(--red)">불러오기 실패: ' + e.message + '</div>';
   }
 }
 
